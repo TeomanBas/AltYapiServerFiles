@@ -110,3 +110,69 @@ Bye
 ```
 
 buradan sonra workbench yada navicat gibi uygulamalar ile mysql bağlantısı gerçekleştirilebilir.
+
+## 4. Kaynak Kodlar
+Kaynak kodlar 2014 yılına ait [ham kaynak kodlardır](./Paketler/kaynakkodlar/kraizy.zip)
+Buradaki kodlar içerisinden şimdilik novaline ı üzerinde çalışacağız novaline da bazı bugların fixlendiğini ve bazı hataların zaten giderilmiş olduğunu biliyoruz.öncelikle çalışma yapabilmek için temizlik yapmamız gerekli bunun bu zip dosyasını ayıkladıktan sonra içerisinde sadece novaline dosyaları kalacak ve novaline içerisinde bulunan debug, release, obj gibi derleme sırasında ortaya çıkan dosyaları hem yer kaplamaması hemde kafa karaşıklığına neden olmaması için siliyoruz. 
+
+kraizy.zip arşivini ayıkladıktan içerisindekilerden silininen dizinler
+```shell
+/dev
+/dev_wolf_branch
+/mainline_cython
+/mainline_released
+/mainline_w2.0
+/mainline_w2.1
+/mainline
+
+# tüm kalsörlerin içindeki Debug klasörleri silinecek. ve _UpgradeReport_Files ,ipch adlı klasörler silinecek 
+
+/novaline/Srcs/Client/obj
+/novaline/Srcs/Client/ipch
+/novaline/Srcs/Client/Metin2Client_VC90.sdf
+
+/novaline/Srcs/Server/db/Depend
+/novaline/Srcs/Server/db/Depend.bak
+/novaline/Srcs/Server/db/DB_BUILD_LOG.txt
+/novaline/Srcs/Server/db/ERROR_LOG.txt
+
+/novaline/Srcs/Server/game/locale
+/novaline/Srcs/Server/game/data
+/novaline/Srcs/Server/game/asdf
+/novaline/Srcs/Server/game/CONFIG
+/novaline/Srcs/Server/game/game.idb
+/novaline/Srcs/Server/game/game.pdb
+/novaline/Srcs/Server/game/game_r_32
+/novaline/Srcs/Server/game/metin2@10.1.89.23
+/novaline/Srcs/Server/game/sdf
+/novaline/Srcs/Server/game/test
+/novaline/Srcs/Server/game/VERSION.txt
+/novaline/Srcs/Server/game/src/_UpgradeReport_Files
+/novaline/Srcs/Server/game/src/OBJDIR
+
+/novaline/Srcs/Tools/WorldEditor/WorldEditor_VC90.sdf
+/novaline/Srcs/Tools/obj
+/novaline/Srcs/Tools/WorldEditor/Debug
+/novaline/Srcs/Tools/WorldEditor/ipch
+/novaline/Srcs/Tools/_UpgradeReport_Files
+```
+
+bu temizliğin ardından novaline dosyasını tar formatında arşivliyoruz([novaline](./Paketler/TemizKaynakKod-novaline/novaline.tar)) hem elimizin altında bir temiz kaynak bulunsun hemde bunu serverde `/home` diznine arşiv olarak atıp orada tekrar ayıklayacağız direkt dosyaları atarsak bazen aktarımda dosya isimlerinden dolayı hata verebiliyor.
+
+
+Server tarafına attığımız ham dosyalar aynı zamanda bir git alt yapısında tutulacak ve dosyaların üzerinde yapılan değişiklikler git ile izlenmesi sağlanacak.Git izlemi **novaline** ın gereksiz yer kaplayan dosyalardan arındırıldıktan sonraki hali git e dahil edildi.Burada takip edilecek Dosya bu dizindeki `Server` dizininin altında yer alıyor yani Server dosyasını oyun kaynak kodlarını derlediğimiz sunucu olarak düşünebiliriz.Oyun Dosyaları dışında yapılan değişikler örnek olarak pkg kurulumları ve sistem içerisinde kullanlan bazı kısımlar zaten bu anlatımda yer alacak sadece server klasörünü oyun dosyalarının toplu bir izlemesi olarak düşünebiliriz.
+
+`/home` dizini oluşturduktan sonra içerisine sadece arşivi atıyoruz ve ayıklıyoruz daha sonra `/home/novaline/Srcs` içerisine giriş  `Server` dosyasının haricindekileri siliyoruz. `Extern` nin hepsini atmayacağız çünkü içerisinde çalışmayan eklentiler var bunların bazılarını kendimiz oluşturacağız.
+
+## 5. Server Extern Dosyalarını Oluşturmak
+- `/home/novaline/Srcs/Extern` dizinini oluşturuyoruz ve içerisine arşivimizde bulunun `/novaline/Srcs/Extern/` dizininde bulunan `cryptopp` dosyasını atıyoruz.
+- Daha sonra aynı dizine `/home/novaline/Srcs/include`,`/home/novaline/Srcs/lib` adında iki klasör oluşturuyoruz.Arşivde bulunan `Extern/include/` içindeki `cryptopp`, `gtest`, `il` dosyalarını serverdaki `/home/novaline/Extern/include/` dizinine atıyoruz.
+- Daha sonra [Boost](./Paketler/ServerFilesPaketleri/boost_1_43_0.tar.gz) arşivini `/home/novaline/Extern/include/` dizinine atıyoruz ve aynı dizine ayıklıyoruz. Ayıklanan dosyanın içerisindeki `boost` klasörünü bir dizin geriye `/home/novaline/Extern/include/` dizinine alıyoruz.
+- Dada sonra `cp -r /usr/local/include/mysql` klasörünü `/home/novaline/Srcs/Extern/` içerisine aynı isimde ve içerisinkeki dosyalarla kopyalıyoruz.
+- Daha sonra `/home/novaline/Srcs/Server/libdevil/` içerisindeki `.a` uzantılı static kütüphaneleri `/home/novaline/Srcs/lib/` içerisine atıyoruz.
+- Dahra sonra `googletest-1.7.0.txz` paketi kurulmamıştı bu paketi arşiv yönetici ile açıp içerisinden `/usr/local/lib/libgtest.a` dosyasını alıp `/home/novaline/Extern/lib/` içerisine atıyoruz.
+
+## 6. Server Kodlarının Build Edilmesi
+Öncelikle `/home/novaline/Srcs/Extern/cryptopp/` dizininin içerisine gelip `gmake libcryptopp.a -j10` komutuyla cryptopp un derlenmesini sağlıyoruz ve `/home/novaline/Srcs/Extern/lib/libcryptopp.a` dosyası çıkartıldı.
+
+server üzerinden [svn-version](./Dokumanlar/svn-version.md) paketi kurulu olmadığı için server klasörü derlenirken svn hatası verecektir bunun makefile üzerinden bir düzenleme yapıyoruz.
