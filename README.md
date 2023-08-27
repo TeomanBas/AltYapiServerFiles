@@ -176,3 +176,131 @@ Server tarafına attığımız ham dosyalar aynı zamanda bir git alt yapısınd
 Öncelikle `/home/novaline/Srcs/Extern/cryptopp/` dizininin içerisine gelip `gmake libcryptopp.a -j10` komutuyla cryptopp un derlenmesini sağlıyoruz ve `/home/novaline/Srcs/Extern/lib/libcryptopp.a` dosyası çıkartıldı.
 
 server üzerinden [svn-version](./Dokumanlar/svn-version.md) paketi kurulu olmadığı için server klasörü derlenirken svn hatası verecektir bunun makefile üzerinden bir düzenleme yapıyoruz.
+
+```makefile
+# SVN_VERSION = $(shell svnversion -n .) 
+SVN_VERSION = $(shell cat ../../__VERSION__)
+P4_VERSION = $(shell cat ../../__VERSION__)
+```
+`Server/game/src/Makefile` da mevcut svn versiyonu nu alan kısmı # işareti yorum satırı yaptık ve versiyon bilgisini bizim oluşturduğumuz `__VERSION__` dosyasından almasını sağladık.
+
+```makefile
+# SVN_VERSION = $(shell svn info |grep Revision: |cut -c11-)
+SVN_VERSION = $(shell cat ../../__VERSION__)
+```
+
+yukarıda yaptığımız aynı işlemi `Server/db/src/Makefile` içinde yaptık
+
+
+Daha sonra `Server/Makefile` içerisinde yorum satırlarını kaldırdık ve clean komutu ekledik. **(commit id : cb51f99)**
+```makefile
+
+clean: .
+	$(MAKE) -C libserverkey clean
+	$(MAKE) -C liblua clean
+	$(MAKE) -C libsql clean
+	$(MAKE) -C libgame/src clean
+	$(MAKE) -C libpoly clean
+	$(MAKE) -C libthecore/src clean
+	$(MAKE) -C game/src clean
+	$(MAKE) -C db/src clean
+```
+
+Cryptopp hatalarını çözmek için  db ve game Makefile'larındaki CFLAG parametrelerine`-fno-strict-aliasing -pthread` parametrelerini eklemeliyiz **(commit id : f9d4791)**
+
+### Game Build
+şu anda derlemek için game veya db den başlanırsa bazı .o uzantılı dosyaların eksik olduğu hatası alırız önce `Server/` dizini içerisinde `gmake all -j4` komutuyla serverin derlerlenmesi gerek bu şekilde yapmamızın sebebi server derlenirken belirli bir sıraya göre derleniyor game veya db eksik dosya kalmıyor char hatasını bu şekilde çözülebilir.
+
+eğer şu şekilde bir hata alınırsa
+```shell
+linking ../test
+/usr/bin/ld: cannot find -lserverkey
+Makefile:143: recipe for target '../test' failed
+gmake[1]: *** [../test] Error 1
+gmake[1]: *** Waiting for unfinished jobs....
+gmake[1]: Leaving directory '/home/novaline/Srcs/Server/game/src'
+Makefile:76: recipe for target 'all' failed
+gmake: *** [all] Error 2
+```
+`gmake -j5` komutu `Serverkey/libserverkey/`dizininde çalıştırılarak libserverkeyin derlenmesi sağlanır ve ardından tekrar `/game/src/` dizini derlenebilir. bu sorunun giderilmesi `Server/Makefile` içinde değişiklik yapıldı libserverkey all kuralı içerisine eklenerek `Server` dizini derlenirken onunda all komutuyla beraber derlenmesi sağlandı.
+
+game build edilirken test dosyasının çıkartılmaması için `/Server/game/src/Makefile` içerisindek aşağıdaki satırlar silinebilir yada yorum satırı olarak işaretlenebilir böylece test dosyası çıkartılmaz.
+` `
+```makefile
+# TESTOBJ = $(OBJDIR)/test.o
+# TESTCPP = test.cpp
+# TEST_TARGET = $(BINDIR)/test
+# $(TEST_TARGET): $(TESTCPP) $(CPPOBJS) $(COBJS) $(TESTOBJ)
+#	@echo linking $(TEST_TARGET)
+#	@$(CC) $(CFLAGS) $(LIBDIR) $(COBJS) $(CPPOBJS) $(TESTOBJ) $(LIBS) -o ../test
+```
+### Db Build
+`Server/db/` içerisini yani db yi derlerken bu şekilde bir hata alıyoruz 
+
+```shell
+DBManager.cpp: In member function 'void CDBManager::SetLocale(const char*)':
+DBManager.cpp:172: error: 'class CAsyncSQL' has no member named 'SetLocale'
+DBManager.cpp:173: error: 'class CAsyncSQL' has no member named 'SetLocale'
+DBManager.cpp:174: error: 'class CAsyncSQL' has no member named 'SetLocale'
+Makefile:64: recipe for target '.obj/DBManager.o' failed
+gmake: *** [.obj/DBManager.o] Error 1
+```
+
+bunun nedeni tam olarak `DBManager.cpp:172: error: 'class CAsyncSQL' has no member named 'SetLocale'` yani CAsyncSQL adlı bir library bulamıyor bunu `Server/db/DbManager.cpp` dosyasında ve `Server/db/DbManager.h` dosyasında `CAsyncSQL` yazan kısımları `CAsyncSQL2` olarak değiştirmemiz lazım.
+
+Setlocale hataları için de aynı dosyas içinde CDBManager metodu içerisinde aşağıdaki şekilde değişiklik yapıyoruz.
+```cpp
+void CDBManager::SetLocale(const char * szLocale)
+{
+    const std::string stLocale(szLocale);
+	sys_log(0, "SetLocale start");
+	for (int n = 0; n < SQL_MAX_NUM; ++n)
+	{
+		m_mainSQL[n]->SetLocale(stLocale);
+		m_directSQL[n]->SetLocale(stLocale);
+		m_asyncSQL[n]->SetLocale(stLocale);
+	}
+	sys_log(0, "End setlocale %s", szLocale);
+}
+```
+hatanın çözümümü **(commit id : 07d7e0c)**
+
+**db build edildiğinde çıkartılan dosyanın ismi**
+db oluşturulurken `linking ...`yazıyor oluşturulan dosyanın ismi yazmıyor bunun için  **linking** kısmında `$(TARGET)` eklemesi yapılarak oluşturulan dosyanın ismi yazdırılabilir bunun için `Server/db/src/Makefile` da aşağıdaki gibi bir değişiklik yapılabilir
+
+```makefile
+$(TARGET): $(OBJS)
+	@echo linking $(TARGET)...
+	@$(CC) $(CFLAGS) $(LIBDIR) $(OBJS) $(LIBS) -o $(TARGET)
+	@touch version.cpp
+```
+hatanın çözümümü **(commit id : 1c82e22)**
+
+**db çalıştırıldığında çıkartılan version dosyası**
+db çalıştırıldığın çıkarttığı versiyon bilgisini düzenleyebiliriz. bunun için `Server/db/src/versiyon.cpp` dosyasındaki **WriteVersion** metodunda aşağıdaki şekilde düzenleme yapabiliriz.
+
+```cpp
+void WriteVersion()
+{
+#ifndef __WIN32__
+	FILE* fp(fopen("VERSION.txt", "w"));
+
+	if (NULL != fp)
+	{
+		fprintf(fp, "db svn revision: %s\n", __SVN_VERSION__);
+		fprintf(fp, "%s@%s:%s\n", __USER__, __HOSTNAME__, __PWD__);
+		fclose(fp);
+	}
+	else
+	{
+		fprintf(stderr, "cannot open VERSION.txt\n");
+		exit(0);
+	}
+#endif
+}
+```
+aynı şekilde bu kısım game kısmında da var aynı değişiklikler game kısmındada yapılabilir.
+
+**(commit id : 4977eaf)**
+
+**Kodları VisualStudio açtıktan sonra sln dosya isimleri değiştirilebilir ancak tüm visual studio dosya içeriklerindede değiştirilmesi gerektiğinden şu aşamada gerekli değil daha sonra değiştirilmeli**
