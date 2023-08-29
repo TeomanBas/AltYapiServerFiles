@@ -1007,3 +1007,268 @@ root@metin2server:/usr/game/cores/ch99 #
 oyunu açarken önce db yi sonra auth sonra ch1 ch2 ch.. açmalıyız .kapatırken önce auth,ch ler ve sonra auth sonra db yi kapatlıyız db herzama kapatılırken en son olmalı ki çünkü item kaybı yaşanabilir.
 
 şu aşamada ServerFiles ile ilgili yapmamız gerekenleri yaptık.**(commit id:9625e38)**
+
+## Client Extern'lerin Ayarlanması
+Bu kısım için visual studio ya c++ oyun geliştirici eklentileri kurulmuş olmalıdır.Oyun client versiyonu 2014 de sızdırıldığı için güncellememiz gerekecek bunun cyrptoo , boost , jpeg kütüphaneleri client içerisine kurulması gerekli bunun için bazı dosyaları indirmemiz gerekli
+
+1. [cryptopp-8.2](https://www.cryptopp.com/#download) indirdik.
+2. [boost-1.7.3](https://www.boost.org/users/download/) buradan boost indirilebilir ancak yeni sürümler olduğu için [sourceforge](https://sourceforge.net/projects/boost/files/boost/) dan eğitim serisi ile uyumlu ilerlemek için eski 1.73.0 versiyonu indirdik 
+3. [devil-sdk-1.8.0](https://openil.sourceforge.net/download.php) bu dosyanın windows için olanını indirdik
+4. [jpegsr9d.zip](https://ijg.org/files/)dosyasını indirdik
+
+ClientSource diye bir klasör oluşturduk ve içerisne “Client” “Extern” adından iki dosya oluşturduk.Temiz kaynak dosyasının içerisisinden `novaline/client` içerisindeki dosyaları oluşturduğumuz `ClientSouce/Client` içine atıyoruz.
+
+indirdiğimiz dosyaları arşivlerinden çıkarttıktan sonra `ClientSource/Extern` adında oluşturduğumuz klasörünün içerisine **cryptopp** ve **include** adında iki klasör oluşturduk ve `ClientSource/Extern/include` içerisine tekrar bir **cryptopp** adında klasör oluşturduk şimdi indirdiğimiz cryptopp dosyasının içindekileri `ClientSource/Extern/cyrptopp` içerisine atıyoruz ve buradaki dosyaların içerisinden `.h` uzantılı dosyaları  da `ClientSource/Extern/include/cryptopp` dosyasının içine kopyalıyoruz.Temiz Kaynak kod olarak ayırdığımız arşivin içerisinde de bulunan `novaline/Srcs/Extern/include/cryptopp` dizini içerisindeki `cryptoppLiblink.h` dosyasını `ClientSource/Extern/include/cryptopp` içine kopyalıyoruz bu dosya aynı zamanda bizim server dosyalarımızında içinde aynı yoldada bulunmakta.Bu dosya içerisinden cryptopp sürümünü düzeltiyoruz.
+
+```c
+#ifndef _CRYPTOPPLIBLINK_H_
+#define _CRYPTOPPLIBLINK_H_
+
+#ifdef _DLL
+#ifndef CRYPTOPP_IMPORTS
+#define CRYPTOPP_IMPORTS
+#endif
+#endif
+
+#if defined(CRYPTOPP_IMPORTS)
+#include "dll.h"
+#else
+	#ifdef _WIN32
+		#ifdef _DEBUG
+			#pragma comment( lib, "cryptlib-8.2.0MTd.lib" )
+		#else
+			#pragma comment( lib, "cryptlib-8.2.0MT.lib" )
+		#endif
+	#endif
+#endif
+
+#endif /* !_CRYPTOPPLIBLINK_H_ */
+```
+`cryptlib-5.6.1MTd.lib` ->`cryptlib-8.2.0MTd.lib`  ve `cryptlib-5.6.1MT.lib` ->`cryptlib-8.2.0MT.lib` kısımlarını şeklinde düzelttik.
+
+Daha sonra `ClientSource/Extern/include/` içerisine indirdiğimiz devil arşivinin içerisinden çıkan **IL** klasörünü atıyoruz. `ClientSource/Extern/` dizinine **lib** adında bir klasör oluşturup, arşivin `/lib/x86/Release/` dizininin içinde **.lib** uzantılı olan dosyaları `ClientSource/Extern/lib` içerisine atıyoruz.
+
+Şimdi `/novaline/Srcs/Client/Extern` içinden “lib” ve “include” içinden bazı dosyaları almamız gerekiyor bunları alıp kendi oluşturduğumuz `ClientSource/Extern/` içindeki lib ve include içine atacağız.
+
+**lib içerisindeki gerekli dosyaların listesi**
+```
+d3d8.lib     
+dxtrans.lib  
+granny2.lib              
+mmap.lib        
+python27.lib           
+strmiids.lib
+d3dx8.lib  
+dmoguids.lib  
+glut32.lib   
+granny_inspector2.lib    
+mss32.lib       
+SecureEngineSDK32.lib
+ddraw.lib  
+dxguid.lib    
+glut.lib     
+grn2gr2.lib            
+il_wrap.lib  
+python27_d.lib  
+SpeedTreeRT.lib
+```
+**include içerisindeki gerekli dosyaların listesi**
+```
+amstream.h  
+d3d8types.h  
+d3drmdef.h  
+d3dtypes.h     
+d3dx8.h        
+d3dx8mesh.h   
+dxfile.h   
+MSS.H             
+SpeedTreeRT.h
+d3d8caps.h  
+d3dcaps.h    
+d3drm.h     
+d3dx8core.h    
+d3dx8math.h    
+d3dx8shape.h  
+dxtrans.h  
+qedit.h
+d3d8.h      
+d3d.h        
+d3drmobj.h  
+d3dx8effect.h  
+d3dx8math.inl  
+d3dx8tex.h    
+granny.h   
+rrCore2.8.49.0.h
+```
+`rrCore2.8.49.0.h` dosyası oyunun kaynak kodalrı içerisinde yok bunu ayrıca internetten bulduk.
+
+daha sonra `novaline/Srcs/Client/scriptLib/Python-2.2/` içindeki `.h` dosyalarını `ClientSource/Extern/include/Python-2.7` adında bir dizin oluşturup içine atıyoruz.
+
+
+bundan sonra `novaline/Srcs/Extern/lib/` içindeki **python27.lib** , **python27_d.lib** dosyalarını
+`clientSource/Extern/lib` içerisine kopyalıyoruz (ancak zaten tıpa tıp aynıları daha önce kopyalamışız)
+
+şimdi lzo yu build edeceğiz.[lzo-2.10](https://linuxfromscratch.org/blfs/view/svn/general/lzo.html)    burdan indirdik sonra bunu visual studio nun bir toolu olan  “developer command prompt” ile arşivi çıkarttıktan sonra aynı dizinde `\B\win32\vc.bat` komutuyla build ettik vc.bat olan yere direk olarak gitmememizin sebebi alt directorylere inmesinden dolayı dosya yollarını bulamıyor yani bizim konumuzu referans alıyor bunun içni dosyalar bulunamadığından derlenemiyor.
+
+![lzo-build-1](./img/lzo-build-1.png)
+
+
+![lzo-build-2](./img/lzo-build-2.png)
+
+
+burada lzo2.lib adında bir dosya dosya oluşturuldu `lzo-1.10/lzo2.lib` bunu dosyayı alıp kendi kaynak kodlarımza eklememiz lazım bu dosya lzo build ettiğimiz ana dizinde burdan alıyoruz ve `ClientSource/Extern/lib` içerisine atıyoruz.Burdan sonra `ClientSource/Extern/include/lzo` dizini oluşturuyoruz ve `lzo-1.10/include/lzo/` klasöründeki dosyaları oluşturduğmuz dizin içerisine atıyoruz. 
+
+`novaline/srcs/Extern/include/lzo-2.03/lzoLibLink.h` dosyasını > `ClientSource/Extern/include/lzo/` içerisine atıyoruz.
+
+bu dosyayı açtıktan sonra 
+`#pragma comment( lib, "lzo-2.03" _RUNTIME_LIBRARY ".lib" )` satırını `#pragma comment( lib,"lzo-2.10.lib" )` olarak değiştiriyoruz.
+
+`ClientSource/Extern/include/python-2.7/pyconfig.h` dosyasında aşağıdaki satırları görüldüğü gibi yeni pyhon sürümü ile değiştiriyoruz.
+
+`#pragma comment(lib,"python22_d.lib")` -> `#pragma comment(lib,"python27_d.lib")` ve
+
+`#pragma comment(lib,"lib,"python22.lib"")` -> `#pragma comment(lib,"python27_d.lib")`
+
+Paragma kısımlarını değiştirdik python27_d.lib debug , python27.lib release olarak bunları yükleyecek.
+
+**libjpeg** build edeceğiz bu kütüphane oyun içerisinde screenshot almamızı sağlayan bir eklenti. indirdiğimiz jpeg-9d arşini çıkartıp dosyanın içerisine giriyoruz ve vs developer command prompt açıyoruz.
+
+![libjpeg-1](./img/libjpeg-1.png)
+
+bu şekilde build edildi
+
+şimdi bu dosyayı visual studio'ya proje olarak ekliyoruz.
+
+![libjpeg-6](./img/libjpeg-6.png)
+
+şöyle bi hata aldık burada 2019 derleme araçlarını yüklememiz gerekiyor çünkü 2022 sürümünü kullanıyoruz.
+
+![libjpeg-7](./img/libjpeg-7.png)
+
+tamam dedik ve derleme araçları 1.43 e yükseltildi
+
+ Ve üzerine gelip özellikler diyoruz.
+
+![libjpeg-2](./img/libjpeg-2.png)
+
+c/c++ kısmından kod oluşturma diyoruz ve çalışma zamanı kitaplığını mt olarak değiştiriyoruz 
+
+![libjpeg-3](./img/libjpeg-3.png)
+
+şimdi statik olarak eklenecek.
+
+![libjpeg-4](./img/libjpeg-4.png)
+
+Bu kısım bu şekilde olmalı
+
+![libjpeg-5](./img/libjpeg-5.png)
+
+Buradan çözümü derle diyoruz 
+
+![libjpeg-8](./img/libjpeg-8.png)
+
+tekrar çözümü derle dedik ve derleme tamamlandı
+
+![libjpeg-9](./img/libjpeg-9.png)
+
+oluşan dosyamız bunun içerisinde win32 ve onun içinden jpeg.lib dosyamızı alacağız bu dosyayı `ClientSource/Extern/lib` içine atalım bu dosyanın adını **libjpeg-9dMT.lib** olarak değiştirelim.
+
+![libjpeg-10](./img/libjpeg-10.png)
+
+aynı zamanda jpeg için header dosyalarınıda almamız gerekiyor bunun için `ClientSource/Extern/include/”` içine **libjpeg-9d** adında bir klasör oluşturalım ve libjpeg derlediğimiz  ana klasör içinde bulunan tüm `.h` uzantılı dosyaları oluşturduğmuz klasör içine atalım. Daha sonra linklemeler için novaline kaynak kodlarından `novaline/Srcs/Extern/include/libjpeg-6d` klasöründen **jpegLibLink.h** adındaki dosyayı da buraya alalım ve `ClientSource/Extern/include/libjpeg-9d/` dizinine atalım.
+
+![libjpeg-11](./img/libjpeg-11.png)
+Daha sonra **jpegLibLink.h** dosyasının içini açıp verisyonunu düzeltelim `#define LIBJPEG_VERSION		"6b"` satırını `#define LIBJPEG_VERSION		"9d"` şeklinde düzeltelim
+
+client debug modda build edebilmek visual studio üzerinde bazı ayarlamalar yapmalıyız
+projenin üzerine sağ tıklayıp burdan
+
+![libjpeg-12](./img/libjpeg-12.png)
+
+yapılandırma yöneticisini seçiyoruz.
+
+![libjpeg-13](./img/libjpeg-13.png)
+
+Burdan çözüm yapılandırmasına gelip yeni yi seçiyrouz
+
+![libjpeg-14](./img/libjpeg-14.png)
+
+şeklinde ayarlayıp tamam diyoruz.
+
+![libjpeg-15](./img/libjpeg-15.png)
+
+Şimdi debug oluştu
+
+![libjpeg-16](./img/libjpeg-16.png)
+
+daha sonra jpeg olan alt dosyaya sağ tıklıyoruz ve özellikler diyoruz
+
+![libjpeg-17](./img/libjpeg-17.png)
+
+ve özellik menüsü çıkıyor
+
+![libjpeg-18](./img/libjpeg-18.png)
+
+kod oluşturma kısımından mt yi mtd yani çok iş parçacıklı hata ayıklama olarak seçiyoruz.
+
+![libjpeg-19](./img/libjpeg-19.png)
+
+Işlev düzeyinde bağlama kısmını hayır olarak seçiyoruz.
+
+![libjpeg-20](./img/libjpeg-20.png)
+
+iyileştirme kısmından çerçeve işaretlerini atla yı hayır olarak seçiyoruz.
+
+![libjpeg-21](./img/libjpeg-21.png)
+
+gelişmiş komut kümesini etkinleştir kısmından streamin sımd extensions 2 (/arch:SSE2) yi seçiyoruz.
+
+![libjpeg-22](./img/libjpeg-22.png)
+
+ön işlemci  kısımından ön işlemci tanımları satırındaki ndebug u kaldırıyoruz.
+
+![libjpeg-23](./img/libjpeg-23.png)
+
+daha sonra tekrar derliyoruz.
+
+![libjpeg-24](./img/libjpeg-24.png)
+
+Ve libjpeg I debug modda derlemiş olduk.
+
+![libjpeg-25](./img/libjpeg-25.png)
+
+Debug kısmı için oluşan jpeg.lib dosyasını alıyoruz ve adını **libjpeg-9dMTd.lib** olarak değiştirip 
+
+![libjpeg-26](./img/libjpeg-26.png)
+
+`ClientSource/Extern/lib/` dizinine içine atıyoruz.release hemde debug modda build etmemizin sebebi bazı lzo veya jpeg hatalarından kurtulmak.
+
+**cryptopp build edilmesi**
+`ClientSource/Extern/cryptopp/cryptest.sln` yi visual studio ile açıyoruz.
+
+![cryptopp-1-27](./img/cryptopp-1.png)
+
+release olarak win32 için build edilmesi gerekli
+
+![cryptopp-2](./img/cryptopp-2.png)
+
+build  edildi.
+
+şimdi de debug modda build ediyoruz.
+
+![cryptopp-3](./img/cryptopp-3.png)
+
+debug modda da derlendi
+
+![cryptopp-4](./img/cryptopp-4.png)
+
+resimde görülen `ClientSource/Extern/cryptopp/Win32/Output/Relase/` ve `ClientSource/Extern/cryptopp/Win32/Output/Debug/` dizinlerinden de lib uzantılı 2 dosyayı alıyoruz
+
+İsimleri değiştirdik bu isimleride zaten `ClientSource/Extern/include/cryptopp/cryptoppLibLink.h` dosyasından aldık çünkü burada belirtmiştik.Ve bu dosyaları `ClientSource/Extern/lib/` içerisine atıyoruz
+
+![cryptopp-5](./img/cryptopp-5.png)
+
+`ClientSource/Extern/include/IL/` klasöründeki `config.h.win` dosyasınn sonundaki win uzantısını siliyoruz dosya `.h` uzantılı olması lazım
+
+**boost kurulumu**
+indirdiğimiz `boost_173_0.tar.gz` arşivinin içerisinden boost klasörünü olduğu gibi `ClientSource/Extern/include/` içine atıyoruz
