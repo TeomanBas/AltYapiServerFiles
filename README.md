@@ -1275,3 +1275,302 @@ indirdiğimiz `boost_173_0.tar.gz` arşivinin içerisinden boost klasörünü ol
 
 **Client Extern Dosyalarının oluşturulması commit id : 3d5dda3**
 
+## Client Source Düzenlemeleri ve Build Edilmesi
+
+1. **python versiyon güncellemesi** **(commit id : )**
+
+2. **lzo versiyon güncellemesi** **(commit id : )**
+
+3. **visual studio ayarlamaları**
+öncelikle visual studio 2022 kullanarak derleme işlemi yapağım sürüme göre farklı hatalar olabilir.`ClientSource/Client/Metin2Client_VC90.sln` dosyasını visual studio ile açıyoruz ve projeleri *yeniden hedefle penceresi* ile açılıyor burada *SDK sürümünü* **son yüklenen sürüm** olarak seçiyoruz ve *palatform araç takımını* **v143 sürümüne yükselt** olarak seçiyoruz ve aşağıda tüm projelerin seçili olması gerekli hepsi için yükseltme işlemi yapıyoruz. **(SKD: 10.0 ,ARAÇ TAKIMI V143)**
+
+Derleme seçeneklerinden bir çok seçenek var burada bizim ihtiyacımız olan sadece **Debug** ve **Release** **Distrubute** sürümleri olacak diğer sürümleri silebiliriz.
+
+**(commit id :cc7b974a )** 
+
+4. buradan sonra sıra ile projeleri build ediyoruz.Hataların çözümleri sırası ile commit geçmişinde açıklamalar ile yer almakta ve her commit içinde yapılan değişiklerin görülebilmesi hatanın nasıl çözüldüğünü göstermektedir.sadece bazı visual studio arayüzünden yapılan değişiklikler burada detaylı anlatılır.
+
+
+**UserInterface-modul-safeseh-hatasi**
+hata;
+```console
+Severity	Code	Description	Project	File	Line	Suppression State
+Error	LNK2026	module unsafe for SAFESEH image.	UserInterface	C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\d3dx8.lib(cstack.obj)	1	
+```
+
+çözüm;
+![modul-safeseh](./img/userinterface-modul-safeseh-hatasi.png)
+
+Linker-> Advance -> Image Has Safe Exception Handlers = No (/SAFESEH:NO) olarak değiştiriyoruz.Bu işlemi Yapılandırma kısmından Debug seçip tekrar yapıyoruz yoksa aynı hata debug için de oluşuyor.
+
+**WINDOWS_IGNORE_PACKING_MISMATCH**
+hata;
+![WINDOWS_IGNORE_PACKING_MISMATCH-1](./img/WINDOWS_IGNORE_PACKING_MISMATCH-1.png)
+
+çözüm;
+UserInterface derlmesinde mileslib için oluşan hata bu hatayı gidermek için `WINDOWS_IGNORE_PACKING_MISMATCH` kısmını kopyalıyoruz ve mileslib projesine özellikler diyerek açıyoruz.C/C++ sekmesini açıyoruz ve bu sekmeden `ön işlemci` kısmını seçiyoruz.
+Ön işlemci tanımlarına düzenle diyerek kopyaladığımız kısmı satır sonuna yapıştırıyoruz ve tüm projeyi tekrar derliyoruz.
+
+
+![WINDOWS_IGNORE_PACKING_MISMATCH-2](./img/WINDOWS_IGNORE_PACKING_MISMATCH-2.png)
+
+![WINDOWS_IGNORE_PACKING_MISMATCH-3](./img/WINDOWS_IGNORE_PACKING_MISMATCH-3.png)
+
+![WINDOWS_IGNORE_PACKING_MISMATCH-4](./img/WINDOWS_IGNORE_PACKING_MISMATCH-4.png)
+
+![WINDOWS_IGNORE_PACKING_MISMATCH-5](./img/WINDOWS_IGNORE_PACKING_MISMATCH-5.png)
+
+**LTCG WARNİNG**
+![LTCG-1](./img/LTCG-1.png)
+
+derlemeden şeklinde bir warning alınırsa 
+
+![LTCG-2](./img/LTCG-2.png)
+
+buradan komut satırı deyip
+
+![LTCG-3](./img/LTCG-3.png)
+
+`/LTCG` yi yazıyoruz.
+
+
+**exe dosyası**
+exe dosyası eğer değişiklik yapmadıysak ve release olarak derliyorsak `ClientSource/Client/UserInterface/Release/metin2client.exe` şeklide çıkartılır.debug olarak derliyorsak `ClientSource/Client/bin` içerisine çıkartılır. Bu dosyaları client için ilerki aşamada kullanacağız.
+
+**libcmt.lib çakışması**
+
+![libcmt-1](./img/libcmt-1.png)
+
+şeklinde bir çakışma uyarı alınıyorsa
+
+![libcmt-2](./img/libcmt-2.png)
+şeklinde bir parametre eklenebilir ancak sadece debug için eklenirse build oluyor release için eklenirse visual studio çöküyor build olmuyor release için eklenmemesi gerekli.
+
+**Enerji Sistemi , ve DragonSoul Sisteminin aktif edilmesi**
+packlerde tanımlı oldukları için kodlarda da bu iki sistemi aktif edip derlememiz gerekli yoksa oyuna girişte hata alırız.
+
+DragonSoul: simya sistemi
+New_quipment : yeni yüzük slotları
+
+bunları `ClientSouce/Client/UserInterface/Locale/Locale_inc.h` dosyasında tanımlıyoruz.
+
+```h
+#define ENABLE_DRAGON_SOUL_SYSTEM
+#define ENABLE_NEW_EQUIPMENT_SYSTEM
+```
+bu satırları `ClientSouce/Client/UserInterface/Locale/Locale_inc.h` dosyasına ekliyoruz.
+ve buna benzer tanımları `ClientSouce/Client/UserInterface/System/PythonAplicationModule.cpp` dosyasında görebiliyoruz bu dosyadaki tanımlara göre Locale dosyasını düzenliyoruz.Bu dosya içerisinde oyun içi sistemler tanımlanmış.
+
+
+**exe lerin çıkış dizini**
+derlendikten sonra çıkan exe dosyalarının nereye çıkacağınız UserInterface özellikler kısmından genel sekmesinden ayarlayabiliyoruz.
+
+![exe-cikis-dizini](./img/exe-cikis-dizini.png)
+
+
+**COMMIT GEÇMİŞİ**
+```
+commit 867fa8a8ee20e2f6eeea10fdad6fbd06c8203f07
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 14:56:41 2023 +0300
+
+    simya ve yeni yüzük slotları sistemleri aktif edildi.
+
+commit e886f23f1aa67a0616ccdf1db09a30a6a0ddf468
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 14:44:24 2023 +0300
+
+    libcmt.lib çakışması için debug derlemesine parametre eklendi.
+
+commit 105887ccd10265597eb534b13c4324cf2369f797
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 14:30:00 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   LNK2001 unresolved external symbol "public: void __thiscall SpherePack::LostChild(class SpherePack *)" (?LostChild@SpherePack@@QAEXPAV1@@Z)     UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\eterlib.lib(GrpObjectInstance.obj)        1
+    "
+    
+    UserInterface release derlenirken oluşan hata giderildi"
+    
+    On branch master
+     Changes to be committed:
+            modified:   Client/SphereLib/spherepack.h
+
+commit 507fe88885f6cf7f7f50d7d7b3f1d88aa725f3d4
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 13:40:10 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   LNK2026 module unsafe for SAFESEH image.        UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\d3dx8.lib(d3dxmath.obj)   1
+
+commit a7c2cf96b7ab8368a24a14e99ee76ae2c61bf4e7
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 13:32:35 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   C2338   static_assert failed: 'Windows headers require the default packing option. Changing this can lead to memory corruption. This diagnostic can be disabled by building with WINDOWS_IGNORE_PACKING_MISMATCH defined.'      mileslib        C:\Program Files (x86)\Windows Kits\10\Include\10.0.22000.0\um\winnt.h  2535
+
+commit 5c16a66d9d4b6b56a51879903dbed9af1ef24244
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 13:06:46 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   LNK1104 cannot open file 'lzo-2.10.lib' UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\LINK      1
+
+commit a8336f3e428f5c8bb6bcf46e35a16366c33906a5
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 12:50:49 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   LNK2026 module unsafe for SAFESEH image.        UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\d3dx8.lib(cstack.obj)     1
+
+commit e871912fab7fab7d6409f35c82cd6d3188138c07
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 12:33:10 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   LNK1104 cannot open file 'python22.lib' UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\LINK      1"
+    
+    UserInterface derlenirken oluşan hata giderildi bunun python sürünümü güncellediğimizden dolayı UserInterface.cpp içerisinde de tanımlamamış olmamız
+
+commit a689e6a1881a9b5d2b41540de67aff9bd5054ce5
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 12:23:52 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   RC1015  cannot open include file 'afxres.h'.    UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\UserInterface.rc  11
+    "
+    
+    UserInterface derlenirken oluşan hata giderildi bunun sebebi visual studio nun yükseltilmesinden dolayı library nin değişmiş olması
+
+commit 66d653a5a202d6e9caeb97a87166bbbc52146fa4
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 12:13:05 2023 +0300
+
+    "Error  C2065   'ILvoid': undeclared identifier UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\GuildMarkUploader.cpp     100
+    "
+    
+    UserInterface derlenirken oluşan hata giderildi
+
+commit 150f4e59925e93304aac470c0405c1f459a5f2e6
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 12:06:59 2023 +0300
+
+    "Error  C2664   'bool PyTuple_GetByte(PyObject *,int,unsigned char *)': cannot convert argument 3 from 'char *' to 'unsigned char *'    UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\PythonPlayerModule.cpp    770
+    "
+    
+    UserInterface derlenirken oluşan hata giderildi
+
+commit 7e0c183ffb1b9507f7f10d71a510545ea2d2c9f0
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 11:56:52 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   C2440   'initializing': cannot convert from 'CAffectFlagContainer::Element' to 'char &' UserInterface   C:\Users\Pc\Desktop\ClientSource\Client\UserInterface\AffectFlagContainer.cpp   68      "
+    
+    UserInterface derlenirken oluşan hata giderildi
+
+commit 12321519b321d8a46ca6da29f79d15f79daecf9e
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 11:14:57 2023 +0300
+
+    SpeedTreelib projesinin derlenmesinde ortaya çıkan hata;
+    "Severity       Code    Description     Project File    Line    Suppression State Error C2039   'string': is not a member of 'std'      SpeedTreeLib    C:\Users\Pc\Desktop\ClientSource\Client\eterLib\GrpDetector.h   23"
+    
+            hata "#include <string>" ile giderildi.buradan sonra eğer sıfırdan bir derleme yapıyorsak eterlib projesini tekrar derlenmesi gerekli.
+    
+     On branch master
+     Changes to be committed:
+            modified:   Client/EterLib/GrpDetector.h
+
+commit a2ecb09d2f47235cf5eadaac0e977820e7d4d989
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 11:08:21 2023 +0300
+
+    Python 2.2 den 2.7 ye güncellendiğinden dolayı kodlarda güncelleme yapıldı.
+
+commit 2a42e1cd62b00553dcf42857b899e5163018cc56
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 11:01:15 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   C2338   static_assert failed: 'Windows headers require the default packing option. Changing this can lead to memory corruption. This diagnostic can be disabled by building with WINDOWS_IGNORE_PACKING_MISMATCH defined.'      mileslib        C:\Program Files (x86)\Windows Kits\10\Include\10.0.22000.0\um\winnt.h  2535"
+    
+    hatasını preprocessor definition parametrelerine "WINDOWS_IGNORE_PACKING_MISMATCH" ekleyerek çözüldü.
+    
+     On branch master
+     Changes to be committed:
+            modified:   Client/MilesLib/mileslib_VC90.vcxproj
+
+commit 9e94f1028dffb055cc85c63a585dff4e6d25dda1
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 10:53:13 2023 +0300
+
+    "bool bSaved = SaveJPEG(c_pszFileName, pbyBuffer, uWidth, uHeight);"
+    
+    hatası çözüldü.Bu hatanın nedeni libjpeg sürümünün yükseltilmesiydi.
+    
+    pbyBuffer LPBYTE ile cast edildi.
+    
+     On branch master
+     Changes to be committed:
+            modified:   Client/EterPythonLib/PythonGraphic.cpp
+
+commit d19d12962d15151f6aeb76b77982ac06955673a9
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 10:40:28 2023 +0300
+
+    "Severity       Code    Description     Project File    Line    Suppression State
+    Error   C1083   Cannot open include file: 'libjpeg-6b/jpeglib.h': No such file or directory     eterlib C:\Users\Pc\Desktop\ClientSource\Client\EterLib\JpegFile.cpp    7"
+    hatasının çözümü yapıldı libjpeg güncellemesinden dolayı oluşan dizin
+    ismi düzeltildi ve data,size değişkenlerinin ismi dataj,sizej olarak
+    değiştirildi
+    
+    On branch master
+     Changes to be committed:
+            modified:   Client/EterLib/JpegFile.cpp
+
+commit 90a35edef9d9216043ea3e96858071c437b46485
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 10:30:24 2023 +0300
+
+    eterBase in derlenmesine engele olan hata giderildi.Hatanın sebebi Cryptopp sürümümüzü güncellediğimizden kaynaklanıyordu.
+
+commit cc7b974a106bdb2c48964330b45907e7f676595a
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 10:22:35 2023 +0300
+
+    Visual Studio 2022 ile sdk -> 10.0 ve platform araç takımı -> 143 e güncellendi.
+
+commit ebd3c11c2dd92e94b92dcc1a2f95c0fa99f1636e
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 09:58:43 2023 +0300
+
+    lzo-2.03 sürümü lzo-2.10 sürümüne yükseltildi
+
+commit 795c6d8476b6f402cb927dbd35f56af12b6fb9f1
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 09:45:42 2023 +0300
+
+    Client kaynak kodlarında python 2.7 güncellemesi yapıldı.
+
+commit 3d5dda34a611110b82cab4aa64bfabd341d935a7
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 08:13:07 2023 +0300
+
+    Client için Extern dosyaları oluşturuldu.
+
+commit da8676f678ad1d040561da670969d11650794faa
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 08:12:02 2023 +0300
+
+    Client kaynak kodları eklendi.
+
+commit de3cc49fd54c69b352e0ce2cad601a9c8e5e590a
+Author: Teoman BAŞ <teomanbas@protonmail.com>
+Date:   Tue Aug 29 08:10:34 2023 +0300
+
+    README.md ve .gitignore eklendi.
+
+```
+
