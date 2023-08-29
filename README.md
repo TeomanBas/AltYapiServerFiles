@@ -1272,3 +1272,6 @@ resimde görülen `ClientSource/Extern/cryptopp/Win32/Output/Relase/` ve `Client
 
 **boost kurulumu**
 indirdiğimiz `boost_173_0.tar.gz` arşivinin içerisinden boost klasörünü olduğu gibi `ClientSource/Extern/include/` içine atıyoruz
+
+**Client Extern Dosyalarının oluşturulması commit id : 3d5dda3**
+
