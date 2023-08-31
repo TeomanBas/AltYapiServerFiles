@@ -305,7 +305,7 @@ aynı şekilde bu kısım game kısmında da var aynı değişiklikler game kıs
 
 **Kodları VisualStudio açtıktan sonra sln dosya isimleri değiştirilebilir ancak tüm visual studio dosya içeriklerindede değiştirilmesi gerektiğinden şu aşamada gerekli değil daha sonra değiştirilmeli**
 
-## Server Filesin Oluşturulması
+## 7. Server Filesin Oluşturulması
 burada server files oluşturmak için çalışmalar yapılacak bunun gerekli data,locale ve proto [dosyaları](./Paketler/ServerFilesPaketleri/data-locale-proto_dosyalari.zip) Paketler içerisine eklendi.
 
 Öncelikle server tarafından belirli dizinleri oluşturmamız gerekli
@@ -1008,7 +1008,7 @@ oyunu açarken önce db yi sonra auth sonra ch1 ch2 ch.. açmalıyız .kapatırk
 
 şu aşamada ServerFiles ile ilgili yapmamız gerekenleri yaptık.**(commit id:9625e38)**
 
-## Client Extern'lerin Ayarlanması
+## 8. Client Extern'lerin Ayarlanması
 Bu kısım için visual studio ya c++ oyun geliştirici eklentileri kurulmuş olmalıdır.Oyun client versiyonu 2014 de sızdırıldığı için güncellememiz gerekecek bunun cyrptoo , boost , jpeg kütüphaneleri client içerisine kurulması gerekli bunun için bazı dosyaları indirmemiz gerekli
 
 1. [cryptopp-8.2](https://www.cryptopp.com/#download) indirdik.
@@ -1275,7 +1275,7 @@ indirdiğimiz `boost_173_0.tar.gz` arşivinin içerisinden boost klasörünü ol
 
 **Client Extern Dosyalarının oluşturulması commit id : 3d5dda3**
 
-## Client Source Düzenlemeleri ve Build Edilmesi
+## 9. Client Source Düzenlemeleri ve Build Edilmesi
 
 1. **python versiyon güncellemesi** **(commit id : )**
 
@@ -1573,4 +1573,150 @@ Date:   Tue Aug 29 08:10:34 2023 +0300
     README.md ve .gitignore eklendi.
 
 ```
+
+## 10. Client pack dosyalarının ayarlanması
+Client dosyalarını için [bu dosyayı](https://metin2.download/file/7nfJ30fYXZ7TlDOWjw0eOw6MU3rHUM6U) indirmemiz gerekli ancak ağ sorunlarından dolayı dosya indirilemedi daha sonra indirili `Paketler/ClientPack/`dizni altına eklenecek. Bu dosyanın yerine mmotutkunları'nda bu dosyanın eğitim içerisindeki değişikleri yapılmış ve hazır hali indirildi [bu dosya](./Paketler/ClientPack/Client_20220321_MMOTutkunlari.zip) üzerinden değişiklikler yapılıyor olacak.Ancak bu dosyada bir çok bug bulunmakta bu buglar ileriki aşamalarda giderilmeye çalışılacak.Burada yapılan değişikler indirilemeyen dosya için aynı şekilde uygulanabilir.
+
+*epx* ve *epk* uzantılı dosyaları açıp yeniden paketleyebilmek için **Epack32** ve **EterNexus** programları kullanılabilr EterNexus tek dosya içerisinde direkt olarak Desktop dizininde olmalı dosya yollarında problem çıkıyor ve çalışmıyor.Bu dosyalar yine `Paketler/ClientPack/` diziinine eklendi.
+
+Bunlar haricinde oyunun türkçeleştirmesi için maxmi nin hazır filesindeki client içerisinden **locale_tr.eix** ve **locale_tr.epk** dosyaları alındı.Aynı şekilde [maxminin hazır filesi](Paketler/HazırFilesler/turkmmo--maxmiblackforce-hazır-files-source) de `Paketler/HazırFilesler/` içerisine indirilip eklendi.
+
+Daha sonra güncel client içerisinden basit bir kaç dosya alacağız ancak daha önce indirmiş olduğum offical gameforce metin2 sinin client dosyalarının da bazı kısımları ileriki aşamalarda gerekli olabilir belki elimizin altında bulunsun diye `Paketler/OfficalGameforceClient/` dizinine tarihi(23.03.2023) ile beraber ekledim.
+
+Düzenlemelere geçersek **Client_20220321_MMOTutkunlari.zip** dosyasını bir dizine çıkartıyoruz ve bu klasör içerisindeki `Client/pack/` içindeki **root.eix** ve **root.epk**
+dosyalarını Epack32 yi çıkartıp içerisine atıyoruz ve bu program ile bu **root.eix** dosyasını aç diyoruz şimdi programı aynı dizine *root* adında bir klasör çıkarttı. bu dosya içerisine gelip **serverinfo.py** dosyasını aşağıdaki gibi düzenliyoruz.Aşağıdaki örnek tamamen bizim yapımıza göre ip ve ch ayarlanmış şekilde düzenlenmiş şekildedir.
+
+```py
+import app
+app.ServerName = None
+
+
+SERVER_1 = {
+    "name" : "my_test_server",
+    "host" : "192.168.100.156",
+    "auth" : 11900,
+    "ch1"  : 13900,
+    "ch2"  : 13920, 
+}
+
+
+
+STATE_NONE = "..."
+
+STATE_DICT = {
+	0 : "...",
+	1 : "NORM",
+	2 : "BUSY",
+	3 : "FULL"
+}
+
+SERVER01_CHANNEL_DICT = {
+	1:{"key":11, "name":"ch1", "ip":SERVER_1["host"], "tcp_port":SERVER_1["ch1"], "udp_port":SERVER_1["ch1"], "state":STATE_NONE,},
+    2:{"key":12, "name":"ch2", "ip":SERVER_1["host"], "tcp_port":SERVER_1["ch2"], "udp_port":SERVER_1["ch2"], "state":STATE_NONE,},
+}
+
+REGION_NAME_DICT = {
+	0 : SERVER_1["name"],		
+}
+
+REGION_AUTH_SERVER_DICT = {
+	0 : {
+		1 : { "ip":SERVER_1["host"], "port":SERVER_1["auth"], },
+
+	}		
+}
+
+REGION_DICT = {
+	0 : {
+		1 : { "name" :SERVER_1["name"], "channel" : SERVER01_CHANNEL_DICT, },
+	},
+}
+
+MARKADDR_DICT = {
+	10 : { "ip" : SERVER_1["host"], "tcp_port" :SERVER_1["ch1"], "mark" : "10.tga", "symbol_path" : "10", },
+}
+```
+
+dosya yı bu şekide düzenledikten sonra Epack32 ile tekrar paketliyoruz. ve `Client/pack` içerisinedeki dosyalar çıkartılan **root.eix** ve **root.epk** dosyalarını değiştiriyoruz.
+
+Daha sonra ClientSource derlememizde elde ettiğimiz **metin2clientdegub.exe** ve **metin2clientrelease.exe** dosaylarını alıp Client dizini içerisine atıyoruz ve buradaki metin2client.exe dosyaları ile değiştiriyoruz.
+
+Ve bağlantımızı ve **metin2clientdebug.exe** dosyası ile oyuna giriş yapıyoruz.Şuan bir hata ile karşılaşmadım ve oyuna giriş yapabildim.Ancak /var/db/ içerine attığımız database dosyaları içerisinde bizim veritabanlarımız ve bizim giriş yapabilmemiz için kullanıcı adı ve şifreye ihtiyacımı database Workbench ile bağlanarak **account** database inddeki **account** tablosunda tanımlı olan bir kullanıcı oluşturmamız gerekebilir veya buradaki bir kullanıcıyı kullanabiliriz.aynı zamanda yeni bir kullanıcı eklersek bunu gm olarak ayarlamak isteyebiliriz bunuda **common** database indeki **gmlist** tablosunda tanımlamamız gerekli.ileri aşamalarda bu kısım açıklamaya çalışılacak.
+
+Normalde *metin2.download* adresinden dosyayı indirebilmiş olsaysın `/Client/pack/` içerisinde locale_en.eix ve locale_en.epk dosyaları olacaktı ve bu dosyaları Epack32 ile açıp içerisindeki bazı dosyalrı türkçe dosyalar ile değiştirip tekrar paketleyip Client Dosyalarımızda pack içerisinde atacaktık.
+
+Epack32 ile dosyaları tr ve en uzantılı dosyaları extract ediyoruz önce `locale_tr.eix` yi extract ediyoruz ve locale_tr adından bir klasör çıkarttı klasör ismini *locale_tr2* olarak değiştiriyoruz daha sonra `locale_en.eix` uzantılı dosyayı extract ediyoruz ve  klasör ismini `locale_tr` olarak değiştiriyoruz.*locale_tr2* içerisinden `locale_tr2/locale/tr/` dizininden 
+```console
+empiredesc_a.txt
+empiredesc_b.txt
+empiredesc_c.txt
+item_list.txt
+item_proto
+itemdesc.txt
+jobdesc_assassin.txt
+jobdesc_shaman.txt
+jobdesc_sura.txt
+jobdesc_warrior.txt
+locale_game.txt
+locale_interface.txt
+mob_proto
+shilldesc.txt
+shilltable.txt
+```
+dosyalarını locale_tr adındaki dosyamızın aynı dizine atıyoruz ve buradaki dosyalar ile değiştiriyoruz. bu arada  `/locale_tr/en` dosyasının adını `tr` olarak değiştiriyoruz.
+ve tekrar `locale_tr` yi paketleyip `locale_tr.eix` ve `locale_tr.epk` dosyalarımızı `Client/pack`` içerisine atıyoruz.
+
+Bu kısımdan sonra ekledğimiz locale dosyasını `Client/locale.cfg` dosyasında tr olarak tanımlamamız gerekli.Bunun için offical metin2 dosyalarında halihazırda kullanılan **locale.cfg** içerisinde zaten tr tanımlanmış bu dosyayı alıp locale.cfg ile değiştiriyoruz.
+
+Eksik olan upload dosyalarını offical metin2 client dosyalarından **(upload klasörü)** alıyoruz bizim client dosyamıza aynı dizine atıyoruz.
+
+Daha sonra ClientSouce derlemesi yaparken Devil güncelleştimesi yapmıştık Devil derlediğimiz klasörden **(/DevIl-Windows-SDK-1.8.0/Devil Windows SKD/lib/x86/Release/)**  içisinden devil dll lerini alıp `Client/` dizini içerisine atıyoruz.
+
+Oyunu açıyoruz ancak bazı hatalar ve buglar var tabi.
+server tarafındaki `SYSERR: Aug 30 22:11:23 :: ReadQuestCategoryFile: QUEST Cannot open 'questcategory.txt'` hatası için questcategory.txt dosyası ekleyebiliriz veya bunu tamamen kaldırabiliriz biz burada bu özelliği kaldırıyoruz serverde  ilgili dosyalarda değişikler yapıyoruz.**commit id : da28fc7**
+
+questcategori özelliğinin kaldırılmasından dolayı oluşan clientin çökmesine neden olan hata giderildi **commit id : 2397b79**
+
+bu değişikliklerden dolayı serverdeki dosyaları tekrar derliyoruz.
+
+şimdi questler için bazı dosyaları değiştireceğiz bunlar türkçeleştirme için gerekli.
+
+`locale_tr2` klasöründen bazı dosyaları locale_tr içerisine atıp daha sonra tekrar pack leyip oyun içerisine atacağız yılarıda yaptığımız gibi.
+
+locale_tr2 içerisinden alacağımız dosaylar;
+
+```console
+# /locale_tr/locale/tr/ui/windows
+windows.dds
+# /locale_tr/locale/tr/ui/select
+select.dds
+# /locale_tr/locale/tr/ui/mapname
+tüm içindekiler alınabilir.
+# /locale_tr/locale/tr/ui/login
+login.dds
+# /locale_tr/locale/tr/ui/guild
+guild.dds
+```
+
+bu dosyaları locale_tr içerisinde eşdeğer konumlara atıp tekrar pack liyoruz ve `Client/pack` dizini içerindeki dosaylar ile değiştiriyoruz.
+
+ve şu an için bir sorun ile karşılaşılmadı.Ancak bir çok syserr hatası ve bug oyun içerisinde mevcut daha 2014 den sonra çıkan büyük yang buglarıda mevcut bu bugların araştırılıp kapatılması gerekli
+şu anda oyun içerisindeki görülen buglar
+- cesur bineklere binememe sorunu
+- bineklerin item penceresinde giyili halinin gösterilmemesi 
+- satıcıda ki 0 yangla olan itemlerin  yang olmasına rağmen satın alınamaması
+- satıcıdaki orjinal sürümde olmayan itemler
+- Bazı slotların isimlerinin olmaması ???? şeklinde gözükmesi
+
+2008 den farkı ;
+- simya sistemi
+- enerji sistemi
+- sürgün mağarası
+- beta itemler
+- 90 map i
+- büyülü orman
+- kemer sistemi
+
+
+**not:** item proto test dosyalarını paketlemek için dump_proto.exe kullanılabilir.
 
