@@ -1720,3 +1720,216 @@ ve şu an için bir sorun ile karşılaşılmadı.Ancak bir çok syserr hatası 
 
 **not:** item proto test dosyalarını paketlemek için dump_proto.exe kullanılabilir.
 
+## FreeBsd 14.0'a  Geçiş (Test)
+1. Öncelikle bir FreeBsd 12 sanal sunucusu kurulması gerekli bu sunucu normal 9.3 configurasyonları taşıyabilir çok da farklı bir değişiklik içermez
+
+	Sunucu kurulumu yapıldıktan sonra Freebsd 12 de pkg komutlarını kullanabiliriz öncelikle `pkg` komutuyla güncel paket listesi alıyoruz.
+
+	**Not: Eğer sürüm eski ise pkg ve portsnap paketleri için fetch ve update işlemleri sorunlu olabilir.**
+
+	Daha sonra ;
+	`pkg install python mysql56-client mysql56-server gmake cmake makedepend gcc gcc9 subversion googletest openssl gdb wget llvm80` komutu ile gerekli paketleri kuruyoruz.
+
+	**Not: Mysql56 işletim sisteminin desteğinin kaldırılması ve mysql56 nın desteğinin olmaması nedeniyle /urs/ports/database den kuruldu.daha sonra dışarıya bağlantı açmak ve root yetkileri için buradaki dökümanlarda yazılanlar uygulandı.([ftp-root-erisimi](./Dokumanlar/ftpd-disaridan-root-erisimi.md), [mysql56_root_yetki_ayarlari](./Dokumanlar/mysql56_root_yetki_ayarlari.md),[mysql56-ports-kurulumu](./Dokumanlar/mysql56-ports-kurulumu.md)).<br>Eğer portslardan kurulumda eksik library varsa örnek olarak python38 ve cmake paketleri olmadığında hata aldık bunlarıda pkg veya diğer portslar içerisinde kurabiliriz.**
+
+	**Not: llvm80 paketi yoksa llvm şeklinde de indirilebilir.**
+
+	**Not:devil in portslardan derlerken static libleri makefile içesinde değişiklikler yaparak ayrıca oluşturmak gerek bunun içi iki kaynak [bing-soruları](/Dokumanlar/Devil-ve-bazı-diger-sorular.pdf) , [video-hata-cozumu](/Dokumanlar/DevIL%20library%20update.mp4) .**
+
+2. İşletim sistemi ile ilgili paketlerin kurulumları bittikten sonra oyun kaynak kodlarını derlemek için gerekli paketler bu paketleri indirip oyunun server tarafındaki kaynak kodlarına ilgili konuma atmamız gerekiyor
+
+	1. boost 1.43 -> 1.84 | https://www.boost.org
+	2. devil 1.61 -> 1.8.0 | http://openil.sourceforge.net/download.php
+	3. cryptopp 5.6.1 -> 8.9.0 | https://www.cryptopp.com/#download
+	4. libjpeg-6b -> libjpeg-9d | https://ijg.org
+	5. lzo-2.03 -> lzo-2.10 | http://gnuwin32.sourceforge.net/packages/lzo.html
+	6. python 2.2 -> python 2.7 |
+
+
+	**Not : Burada devil indirmiyoruz çünkü içerisinde nvidia ve x11 için bazı toollar var ve yükler bu toollar da kuruluyor bu yüzden /usr/ports/graphic/devil/ kısmında bazı parametleri değiştirerek kurulum yapacağız.**
+
+### Boost kütüphanesinin ayarlanması
+
+önceklikle boost u indirdikten sonra server de `/home/novaline/srcs/` dizinine `Extern` diye bir klasör oluşturuyoruz bu klasör içerisine `include` ve `lib` adında iki klasör daha oluşturuyoruz.
+
+indirdiğimiz `boost_1_84_0.tar.gz` yi include içerisine atıyoruz ve `tar -xzf boost_1_84_0.tar.gz` komutu ile çıkartıyoruz ve sonrasında içerisindeki boost klasörünü bu `/Extern/include` dizine alıp `boost_1_84_0` dosyasını siliyoruz.
+
+### Cryptopp kütüphanesinin ayarlanması
+indirdiğimiz `cryptopp-CRYPTOPP_8_9_0.tar.gz` yi `/home/novaline/srsc/Extern` içerisine atıyoruz ve olduğu yere çıkartıyoruz çıkartma işlemi bittikten sonra dosya adını *cryptopp* olarak değiştiriyoruz.`Extern/include/cryptopp` içerisine *cryptopp* adında bir dosya oluşturuyoruz buraya header dosyalarını eklememiz gerekli bunun için `cp *.h ../include/cryptopp` komutu ile Extern dizininde iken tüm header dosyalarını istediğimiz dizine alabiliriz.
+
+Bu kısımdan sonra fbsd 9.3 sürümü için client derlemesinin Externleri içerisinde olan bir dosya var bunuda header dosyaları içerisine atıyoruz. `Metin2Rehberi\FilesCalismasi\ClientSource\Extern\include\cryptopp\cryptoppLibLink.h` dosyasını alıp `Extern/include/cryptopp/` içerisine atıyoruz ve dosya içerisindeki **GNUMakefile** açıp ilk iki satıra 
+
+	CXX = g++9
+	CC = gcc9
+satırlarını ekliyoruz.
+
+Daha sonra build işlemi için 
+
+	gmake clean
+	gmake dep
+	gmake -j6
+
+komutları ile derlemeyi başlatıyoruz.
+
+Kurulum başarılı olduysa bulunduğumuz dizine `libcryptopp.a` dosyası çıkartılmış olucaktır bunu `mv libcryptopp.a ../lib/` komutuyla lib içerisine taşıyoruz.
+
+### Devil kurulumu (Devil-1.8.0)
+bu kısımda portslardan kurulum yapcağız önce `/usr/ports/graphics/devil/` dizini içerisine geliyoruz ve bu dizinde `make config` komutunu çalıştırıyoruz.
+burada aşağıdaki görselde görülen işaretlemelerin işaretli olması ve diğerlerinin işaretsiz olması gerekli oyun gerekli olanlar bunlar.
+
+![devil-gerekli-lib](./img/devil-gerekli-lib.png)
+
+daha sonra `ee Makefile` yazarak makefile da utx i disable etmemiz gerekli
+![disable-utx](./img/disable-utx.png)
+
+Bunları yaptıktan sonra derlemeye başlıyoruz.
+
+Derleme bittikten sonra `/usr/local/lib/` veya derleme dizininde oluşan `/work` dizini içesinde oluşan `.build` içerisinden `libILa.a , libILU.a, libILUT.a` dosyalarını almamız lazım bunun için lib dosyası oluşturuyoruz ve filezilladan sunucudan tek tek bu dosyaları lib klasörümüzün içerisine atıyoruz. Daha Sonra server içerisinde `/usr/local/lib` içerisinden `libjbig.a, libjpeg.a, liblcms.a, libmng.a, libtiff.a` yı alıyoruz ve bunların yanında `libpng16.a` alıp adını `libpng.a` şeklinde değiştiriyoruz.
+
+Buradan sonra jasper için almamız gereken static lib için `/ports/graphics/jasper/Makefile` dosyasında değişik yapmamız lazım ancak bazı sürümlerde **CMAKE_ARGS** veya **CMAKE_ON**,**CMAKE_OFF** şeklinde iki farklı argüman tanımı olabilir.**CMAKE_ARGS** iken `-DJAS_ENABLED_SHARED=false` veya diğerinde **ON** olarak belirtilen argumanları **OFF** kısmına taşıyarak dinamik kütüphaneler yerine static kütüphanelerin oluşturulmasını sağlayabiliriz.Derleme hata verecektir ancak bizim istediğimiz dosyayı `work/stage/usr/local/lib` içerisine **libjasper.a** dosyasını çıkartacaktır.bunuda alıp masaüstümüzdeki lib klasörünü filezilladan atıyorouz. daha sonra buradaki .a uzantılı dosyaları `Extern/lib` içerisine atıyoruz.
+
+`/usr/local/include/IL` klasörünüde `Extern/include` içersine atıyoruz.
+
+bundan sonra devil 1.8.4 versiyonu için `libsquish` `libzstd` `lifdeflate` static lib lerini de ekledik.
+### googletest eklentisinin Externe dahil edilmesi
+
+libjasperde yaptığımızın aynısını yapıyoruz önce `pkg remove googletest` ile googletest i kaldırıyoruz ve Makefile da libjasperde yaptımız gibi düzenleme yapıyoruz ve `make install clean` komutuyla derliyoruz.Derleme hata vermesi önemli değil sonlandıktan sonra `/usr/ports/devel/googletest/work/stage/usr/local/lib` dizni içerisinde `libgtest.a` dosyasını alıyoruz ve bununla beraber `/usr/ports/devel/googletest/work/stage/usr/local/inluce/gtest` klasörünüde alıyoruz. **gtest** klasörünüde `Extern/include` içersine atıyoruz ve static lib **libgtest.a** yıda  `Extern/lib` içerisine atıyoruz.
+
+daha önce 9.3 de indirdiğimiz googletest arşivi içerisinden `googletest-1.7.0/usr/local/lib/libgtest.a` dosyasını `Extern/lib/` içerisine atıyoruz, `googletest-1.7.0/usr/local/include/gtest` klasörünü de `Extern/include/` içerisine atıyoruz.
+
+**kaynak kodlarda keyserver ve googletest i devre dışı bırakacağız yinede nasıl yapıldığının bilinmesinde fayda var**
+
+
+### LZO sürümünün güncellenmesi 
+Lzo nun yeni sürümünü [indiriyoruz](https://www.oberhumer.com/opensource/lzo/#download)
+
+arşivi çıkarttıktan sonra `lzo-2.10\lzo-2.10\minilzo` klasörü içerisinden **minilzo.c** , **minilzo.h** dosyalarını alıp `novaline/Srcs/game/src` içerisine atıyoruz.
+
+`\lzo-2.10\lzo-2.10\include\lzo` içerisindeki **lzoconf.h** , **lzodefs.h** dosyalarını `novaline/Srcs/game/src` içerisine atıyoruz.
+
+daha sonra `game/src/` dizininde bulunan **sectree_manager.cpp** dosyasında değişiklikler yacağız.
+```cpp
+	466- unsigned int uiDestSize;
+	+ lzo_uint uiDestSize;
+```
+satırını şeklinde(+) değiştiriyoruz.
+
+daha sonra `game/src/` dizininde bulunan **cipher.h** dosyasında değişiklikler yacağız.
+
+```cpp
+	31- encoder_->ProcessData((byte*)buffer, (const byte*)buffer, length);
+	31+ encoder_->ProcessData((CryptoPP::byte*)buffer, (const CryptoPP::byte*)buffer, length);;
+```
+```cpp
+	39- decoder_->ProcessData((byte*)buffer, (const byte*)buffer, length);
+	39+ decoder_->ProcessData((CryptoPP::byte*)buffer, (const CryptoPP::byte*)buffer, length);;
+```
+
+satırını şeklinde(+) değiştiriyoruz.
+
+
+### Kaynak kodlardan googletest ve libserverkey in kaldırılması
+Bu kısımda zaten bir çok değişiklik 9.3 sürümünde derleme yaparken yapılmıştı bu kısım git logları üzerinden takip edilebilir gerekli açıklamalar yorum satırları halinde konulacak.yeni bir branch açıp bu branch üzerinden kaynak kod düzenlemeleri yapılacak ve bu düzenlemeler sorun olmaması halinde ana branch merge edilecek.
+
+**NOT: google test derlemiştik bunu artık Extern içerisinden kaldırabilriz**
+
+**Bu Kısımda artık hazırladığımız Extern Dosyasını yeni Extern Dosyası olarak proje dahil edip derleme ve kodlardaki hataları giderip test işlerine başlayabiliriz.**
+
+
+### YENİ BRANCH `fbsd14building` 
+
+**BU KISIMDAN SONRA KAYNAK KODLARDA DEĞİŞİKLER YAPILACAK VE BİR ÇOK KISIMDA DEĞİŞİKLER YAPILACAK BU KISIM `fbsd14building` BRANCH ÜZERİNDE YAPILACAK.**
+
+Kaynak kod düzenlemeleri yapıldı libserverkey ve googletest kaldırıldı ve yükseltmeler yapıldı 
+**commit id:(c36cccd)**
+
+
+### MariaDB kurulumu
+Öncelikle Mariadb son sürümünün client ve server olarak kuruyoruz.
+
+kurulum yaptıktan sonra
+
+```console
+pwd_mkdb -p /etc/master.passwd
+chown -R mysql /var/db/mysql
+chgrp -R mysql /var/db/mysql
+echo 'mysql_enable="YES" >> /etc/rc.conf'
+service mysql-server start
+mysqladmin -uroot -p password
+```
+yeni kullanıcı oluşturmak:
+```console
+CREATE USER 'root'@'%' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+quit
+```
+mysql dosyaları `/usr/local/include/mysql` altında bulunuyor normalde `/usr/local/include/mysql/server/` altında olurdu bundan dolayı bazı dosyaların bulunmamasından dolayı derlemede hata alıyoruz. 
+
+libraryler ise `/usr/local/lib/mysql` altında bulunuyor burada mariadb *libmariadbclient.a* dosyası bulunmakta ancak mysql56 da bu *libmysqlclient.a* şeklinde olurdu burada mariadb kurulumda sembolik link oluşturmuş.
+
+buradan sonra yine makefile düzenlemeleri yapacağız.Daha sonra reconnet hatası için libmysql makefile inda düzenleme yapıyrouz ve header dosyalarını server altından almasını sağlayacağız bundan sonra oyunun veritanına bağlanması için kullanıcıları oluşturacağız bunların hepsi daha önce yapıldığı için burada gösterilmedi bu kısımdan sonra veri tabanına tablo verilerini eski 9.3 versiyonunda kullandığımız veritabanı verilerini sql olarak backup alıp yüklemeliyiz.Burada eski 9.3 sürümünde kullandığımız veritabanı schema ve datasını workbench ile yedekledik ve fbsd14 e import ettik ancak hotbackup boş olduğu onun yedeğini almadı yani oluşturmasaydı veritabanı oluşturulmayacaktı bunun için gerekli databaseleri önceden oluşturmakta fayda var.
+
+mariadb mysql e uyumluluğu olan bi veritabanı ancak /usr/local/mysql dizininde kendisi için özelleşmiş olan bazı header cpp dosyaları var biz burada server altında değilde mysql için geçerli olan dizindeki mysql.h dosyasını aldık ancak ileride bir problem olması durmunda değişebilir. ve bazı değişiklikler yapılabilir
+
+
+
+### Server Derlemeleri Sonuç
+Derlemeler bitti ancak daha client derlemesi yapılması ve client içinde boost crypto gibi kütüphanelerin güncellenmesi gerekli şimdilik yapılan değişiklikler için **commit id (branch :frebsd14buildin :: c1fabbe)**
+
+### Client Build
+Freebsd 14 için yaptığımız server filesindeki kütüphanelerin güncellemeleri için burada client üzerinde yapılan çalışmaların notları yer alacak.
+
+### Client Externlerin güncellenmesi ve yeniden oluşturulması
+
+
+1. [cryptopp-8.2](https://www.cryptopp.com/#download) indirdik.
+2. [boost-1.8.4](https://www.boost.org/users/download/) 
+3. [devil-sdk-1.8.0](https://openil.sourceforge.net/download.php) bu dosyanın windows için olanını indirdik
+4. [jpegsr9f.zip](https://ijg.org/files/)dosyasını indirdik
+5. [lzo-2.10.zip](https://linuxfromscratch.org/blfs/view/svn/general/lzo.html)
+
+`rrCore2.8.49.0.h` dosyası oyunun kaynak kodalrı içerisinde yok bunu ayrıca internetten bulduk.
+
+#### HATALAR
+##### TEXTURE VE TERRAİN FARKLILIKLARI
+boost 1.8.4 ve 1.7.3 de textureların renk tonlarında farklılıklar var
+![boost-1.7.3](img/boost-1-7-3.jpg)
+
+![boost-1.8.4](img/boost-1-8-4.jpg)
+
+bu kısımda yapılanlar sadece değişiklerin dosya yollarının ayarlanması ve snfpring fonksiyonu artık genelde sınıfların içerisine taşındığı `std::snfprint` `snfprint` şeklinde değiştirildi.
+
+##### BİNEKLERE BİNEMEME VE BAZI NESNELERE TIKLAYAMAMA SORUNU
+Oyun içerisinde bazı nesnelere tıklanmıyor ışınlanma yüzüğü gibi ve bineklere binilmmiyor.geçici olarak patch2 i index e dahil edilnce binek sorunu çözülüyor ama burasının detaylı bir şekilde incelenip düzenlenmesi gerekli!!!!!!
+
+##### Release derlemesinde mouse kordinatları gözüküyor
+release derlemesinde mouse kordinatları gözüküyor.Bunu nedeni client kaynak kodlarında UserInterface.cpp dosyasında
+
+	#ifdef _DISRIBUTED
+		stRegisterDebugFlag ="__DEBUG__ = 1";
+	#else
+		stRegisterDebugFlag ="__DEBUG__ = 0"; 
+	#endif
+
+olan kısımların 
+
+	#ifdef _DEBUG
+		stRegisterDebugFlag ="__DEBUG__ = 1";
+	#else
+		stRegisterDebugFlag ="__DEBUG__ = 0"; 
+	#endif
+
+şeklinde değiştirilmesiyle çözüldü.
+
+##### Simya sistemi chnin kapanması sorunu
+simya itemini takıp simyayı aktif edince ch kapanıyor.
+
+##### Eski tip haritalar ve nesneler
+Haritalar ve nesneler eski tip görünümdeler ve oyunun 2008 yılındaki pack leri aktif oluyor.
+
+##### Gereksiz npc ler
+köylerde ve bazı haritalarda gereksiz npc ler var 
+
+
+
